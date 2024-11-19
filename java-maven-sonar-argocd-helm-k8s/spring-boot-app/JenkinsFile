@@ -43,8 +43,7 @@ pipeline {
             }
         }
       }
-    }
-    stage('Upload Deployment File to S3') {
+        stage('Upload Deployment File to S3') {
         environment {
             AWS_ACCESS_KEY_ID = 'AKIA3TD2SWDHWHKLHQAR'
             AWS_SECRET_ACCESS_KEY = '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'
