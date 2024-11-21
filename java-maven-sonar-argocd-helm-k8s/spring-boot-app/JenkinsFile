@@ -32,10 +32,8 @@ pipeline {
         stage('Build and Push Docker Image') {
             environment {
                 DOCKER_IMAGE = "995290/ultimate-cicd:${BUILD_NUMBER}"
-                // DOCKERFILE_LOCATION = "java-maven-sonar-argocd-helm-k8s/spring-boot-app/Dockerfile"
                 DOCKER_CREDENTIALS = credentials('docker-cred')
             }
-
             steps {
                 script {
                     sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && docker build -t ${DOCKER_IMAGE} .'
@@ -52,34 +50,26 @@ pipeline {
                 AWS_DEFAULT_REGION = "us-east-1"
             }
             steps {
-
                 script {
-                    sh '''
-                    // Install pip if not available
-                    if ! command -v pip &> /dev/null; then
-                    apt-get update && apt-get install -y python3 python3-pip
-                    fi
-
-# Install AWS CLI
-                    pip3 install awscli --upgrade --user
-
-
-                }
-                }
-                    script {
                     // Update the deployment file
                     sh """
                     sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                     """
 
-                    // Install AWS CLI (if not already available in your Docker image)
-                    sh "pip install awscli --upgrade --user"
+                    // Install pip and AWS CLI if not available
+                    sh '''
+                    if ! command -v pip3 &> /dev/null; then
+                        apt-get update && apt-get install -y python3 python3-pip
+                    fi
+                    pip3 install awscli --upgrade --user
+                    '''
 
                     // Upload the updated deployment file to S3
                     sh """
                     aws s3 cp java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml s3://${S3_BUCKET}/deployment-${BUILD_NUMBER}.yml
                     """
                 }
-                }
-                }
-                }
+            }
+        }
+    }
+}
