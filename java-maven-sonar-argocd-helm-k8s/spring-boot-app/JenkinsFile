@@ -1,71 +1,85 @@
 pipeline {
-  agent {
-    docker {
-      image 'abhishekf5/maven-abhishek-docker-agent:v1'
-      args '--user root -v /var/run/docker.sock:/var/run/docker.sock' // mount Docker socket to access the host's Docker daemon
+    agent {
+        docker {
+            image 'abhishekf5/maven-abhishek-docker-agent:v1'
+            args '--user root -v /var/run/docker.sock:/var/run/docker.sock' // mount Docker socket to access the host's Docker daemon
+        }
     }
-  }
-  stages {
-    stage('Checkout') {
-      steps {
-        sh 'echo passed'
-        //git branch: 'main', url: 'https://github.com/iam-veeramalla/Jenkins-Zero-To-Hero.git'
-      }
-    }
-    stage('Build and Test') {
-      steps {
-        sh 'ls -ltr'
-        // build the project and create a JAR file
-        sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'
-      }
-    }
-    // stage('Static Code Analysis') {
-    //   environment {
-    //     SONAR_URL = "http://52.203.135.66:9000"
-    //   }
-    //   steps {
-    //     withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
-    //       sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}'
-    //     }
-    //   }
-    // }
-    stage('Build and Push Docker Image') {
-      environment {
-        DOCKER_IMAGE = "995290/ultimate-cicd:${BUILD_NUMBER}"
-        // DOCKERFILE_LOCATION = "java-maven-sonar-argocd-helm-k8s/spring-boot-app/Dockerfile"
-        DOCKER_CREDENTIALS = credentials('docker-cred')
-      }
-      steps {
-        script {
-            sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && docker build -t ${DOCKER_IMAGE} .'
-           sh 'echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin'
-            sh 'docker push ${DOCKER_IMAGE}'
+    stages {
+        stage('Checkout') {
+            steps {
+                sh 'echo passed'
+                //git branch: 'main', url: 'https://github.com/iam-veeramalla/Jenkins-Zero-To-Hero.git'
             }
         }
-      }
-        stage('Upload Deployment File to S3') {
-        environment {
-            AWS_ACCESS_KEY_ID = 'AKIA3TD2SWDHWHKLHQAR'
-            AWS_SECRET_ACCESS_KEY = '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'
-            S3_BUCKET = "chaithu5307project"
-            AWS_DEFAULT_REGION = "us-east-1"
+        stage('Build and Test') {
+            steps {
+                sh 'ls -ltr'
+                // build the project and create a JAR file
+                sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'
+            }
         }
-        steps {
-            script {
-                // Update the deployment file
-                sh """
-                    sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                """
-                
-                // Install AWS CLI (if not already available in your Docker image)
-                sh "pip install awscli --upgrade --user"
+        // stage('Static Code Analysis') {
+        //   environment {
+        //     SONAR_URL = "http://52.203.135.66:9000"
+        //   }
+        //   steps {
+        //     withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
+        //       sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}'
+        //     }
+        //   }
+        // }
+        stage('Build and Push Docker Image') {
+            environment {
+                DOCKER_IMAGE = "995290/ultimate-cicd:${BUILD_NUMBER}"
+                // DOCKERFILE_LOCATION = "java-maven-sonar-argocd-helm-k8s/spring-boot-app/Dockerfile"
+                DOCKER_CREDENTIALS = credentials('docker-cred')
+            }
 
-                // Upload the updated deployment file to S3
-                sh """
-                    aws s3 cp java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml s3://${S3_BUCKET}/deployment-${BUILD_NUMBER}.yml
-                """
+            steps {
+                script {
+                    sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && docker build -t ${DOCKER_IMAGE} .'
+                    sh 'echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin'
+                    sh 'docker push ${DOCKER_IMAGE}'
+                }
             }
         }
-    }
-  }
-}
+        stage('Upload Deployment File to S3') {
+            environment {
+                AWS_ACCESS_KEY_ID = 'AKIA3TD2SWDHWHKLHQAR'
+                AWS_SECRET_ACCESS_KEY = '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'
+                S3_BUCKET = "chaithu5307project"
+                AWS_DEFAULT_REGION = "us-east-1"
+            }
+            steps {
+
+                script {
+                    sh '''
+                    // Install pip if not available
+                    if ! command -v pip &> /dev/null; then
+                    apt-get update && apt-get install -y python3 python3-pip
+                    fi
+
+# Install AWS CLI
+                    pip3 install awscli --upgrade --user
+
+
+                }
+                }
+                    script {
+                    // Update the deployment file
+                    sh """
+                    sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                    """
+
+                    // Install AWS CLI (if not already available in your Docker image)
+                    sh "pip install awscli --upgrade --user"
+
+                    // Upload the updated deployment file to S3
+                    sh """
+                    aws s3 cp java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml s3://${S3_BUCKET}/deployment-${BUILD_NUMBER}.yml
+                    """
+                }
+                }
+                }
+                }
