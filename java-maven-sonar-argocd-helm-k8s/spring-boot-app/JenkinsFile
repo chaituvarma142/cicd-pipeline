@@ -54,7 +54,7 @@ pipeline {
                 stage('Update Deployment File') {
                     environment {
                         S3_BUCKET_NAME = "chaithu5307project"
-                        DEPLOYMENT_FILE_PATH = "java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml"
+                        DEPLOYMENT_FILE_PATH = "/var/lib/jenkins/workspace/Continuous_Integration/java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml"
                     }
                     steps {
                         withCredentials([[ 
@@ -65,8 +65,8 @@ pipeline {
                         ]]) {
                             sh '''
                                 # Navigate to the correct workspace directory
-                                cd java-maven-sonar-argocd-helm-k8s
-
+                                pwd
+                                
                                 # Update the deployment file with the new image tag
                                 sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" ${DEPLOYMENT_FILE_PATH}
 
