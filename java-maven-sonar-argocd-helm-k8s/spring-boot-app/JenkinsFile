@@ -1,8 +1,6 @@
 pipeline {
     agent any
     stages {
-        
-
         // Git checkout
         stage('Checkout') {
             steps {
@@ -28,23 +26,6 @@ pipeline {
                         sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'
                     }
                 }
-
-                // Static Code Analysis (Optional)
-                /*
-                stage('Static Code Analysis') {
-                    environment {
-                        SONAR_URL = "http://54.175.213.96:9000"
-                    }
-                    steps {
-                        withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
-                            sh '''
-                                cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
-                                mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}
-                            '''
-                        }
-                    }
-                }
-                */
 
                 // Build and Push Docker Image
                 stage('Build and Push Docker Image') {
@@ -83,7 +64,9 @@ pipeline {
                             secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
                         ]]) {
                             sh '''
-                                cd /var/lib/jenkins/workspace
+                                # Navigate to the correct workspace directory
+                                cd java-maven-sonar-argocd-helm-k8s
+
                                 # Update the deployment file with the new image tag
                                 sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" ${DEPLOYMENT_FILE_PATH}
 
