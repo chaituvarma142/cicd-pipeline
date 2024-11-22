@@ -47,25 +47,26 @@ pipeline {
                     }
                     steps {
                         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-                                sh '''
-                                        git config user.email "chaitanyavarma142@gmail.com"
-                                        git config user.name "chaituvarma142"
+                                 sh '''
+                                         # Ensure we are on the main branch
+                                         git checkout main
                 
-                                        # Ensure the workspace is clean
-                                        git reset --hard
-                                        git clean -fd
+                                         # Reset and clean the workspace
+                                         git reset --hard
+                                         git clean -fd
                 
-                                        # Update deployment file
-                                        BUILD_NUMBER=${BUILD_NUMBER}
-                                        sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                                          # Update the deployment file with the new image tag
+                                          BUILD_NUMBER=${BUILD_NUMBER}
+                                          sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                 
-                                        # Stage only the deployment file
-                                        git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                                       # Stage and commit the changes
+                                      git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                                         git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit."
                 
-                                        # Commit and push changes
-                                        git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit."
-                                        git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
-                                    '''
+                # Push changes to the main branch
+                git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:refs/heads/main
+            
+                    '''
                         }
                     }
                 }
