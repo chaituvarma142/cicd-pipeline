@@ -1,25 +1,22 @@
 pipeline {
     agent any
     stages {
-        // Git checkout
         stage('Checkout') {
             steps {
-                checkout([$class: 'GitSCM', 
-                    branches: [[name: '*/main']], 
-                    userRemoteConfigs: [[url: 'https://github.com/chaituvarma142/cicd-pipeline.git']]])
+                checkout([$class: 'GitSCM',
+                branches: [[name: '*/main']],
+                userRemoteConfigs: [[url: 'https://github.com/chaituvarma142/cicd-pipeline.git']]])
             }
         }
 
-        // Build and Deploy Pipeline
         stage('Build and Deploy Pipeline') {
             agent {
                 docker {
                     image 'abhishekf5/maven-abhishek-docker-agent:v1'
-                    args '--user root -v /var/run/docker.sock:/var/run/docker.sock' // Mounting Docker socket
+                    args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
                 }
             }
             stages {
-                // Build and Test
                 stage('Build and Test') {
                     steps {
                         sh 'ls -ltr'
@@ -27,30 +24,22 @@ pipeline {
                     }
                 }
 
-                // Build and Push Docker Image
                 stage('Build and Push Docker Image') {
                     environment {
                         DOCKER_IMAGE = "docker.io/995290/ultimate-cicd:${BUILD_NUMBER}"
                     }
                     steps {
                         withCredentials([usernamePassword(credentialsId: 'docker-cred', usernameVariable: 'DOCKER_CREDENTIALS_USR', passwordVariable: 'DOCKER_CREDENTIALS_PSW')]) {
-                            script {
-                                sh '''
-                                    cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
-                                    docker build -t ${DOCKER_IMAGE} .
-                                '''
-                                sh '''
-                                    echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin
-                                '''
-                                sh '''
-                                    docker push ${DOCKER_IMAGE}
-                                '''
-                            }
+                            sh '''
+                                cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
+                                docker build -t ${DOCKER_IMAGE} .
+                                echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin
+                                docker push ${DOCKER_IMAGE}
+                            '''
                         }
                     }
                 }
 
-                // Update Deployment File
                 stage('Update Deployment File') {
                     environment {
                         GIT_REPO_NAME = "deployment_files_manifest"
@@ -61,7 +50,6 @@ pipeline {
                             sh '''
                                 git config user.email "chaitanyavarma142@gmail.com"
                                 git config user.name "chaituvarma142"
-                                BUILD_NUMBER=${BUILD_NUMBER}
                                 sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                                 git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                                 git commit -m "Update deployment image to version ${BUILD_NUMBER}"
