@@ -1,80 +1,90 @@
 pipeline {
-    agent {
-        docker {
-            image 'abhishekf5/maven-abhishek-docker-agent:v1'
-            args '--user root -v /var/run/docker.sock:/var/run/docker.sock' // Mounting Docker socket
-        }
-    }
+    agent any
     stages {
+        stage('Cleanup Workspace') {
+            steps {
+                deleteDir() // Deletes all files and folders in the current workspace
+            }
+        }
         stage('Checkout') {
             steps {
-                sh 'echo passed'
-                // Uncomment this line if actual checkout is required
-                // git branch: 'main', url: 'https://github.com/iam-veeramalla/Jenkins-Zero-To-Hero.git'
+                checkout([$class: 'GitSCM', 
+                    branches: [[name: '*/main']], 
+                    userRemoteConfigs: [[url: 'https://github.com/chaituvarma142/cicd-pipeline.git']]])
             }
         }
-        stage('Build and Test') {
-            steps {
-                sh 'ls -ltr'
-                sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'
-            }
-        }
-        // Uncomment if Static Code Analysis stage is required
-        /*
-        stage('Static Code Analysis') {
-            environment {
-                SONAR_URL = "http://54.175.213.96:9000"
-            }
-            steps {
-                withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
-                    sh '''
-                        cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
-                        mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}
-                    '''
+        stage('Build and Deploy Pipeline') {
+            agent {
+                docker {
+                    image 'abhishekf5/maven-abhishek-docker-agent:v1'
+                    args '--user root -v /var/run/docker.sock:/var/run/docker.sock' // Mounting Docker socket
                 }
             }
-        }
-        */
-        stage('Build and Push Docker Image') {
-            environment {
-                DOCKER_IMAGE = "docker.io/995290/ultimate-cicd:${BUILD_NUMBER}"
-            }
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'docker-cred', usernameVariable: 'DOCKER_CREDENTIALS_USR', passwordVariable: 'DOCKER_CREDENTIALS_PSW')]) {
-                    script {
-                        sh '''
-                            cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
-                            docker build -t ${DOCKER_IMAGE} .
-                        '''
-                        sh '''
-                            echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin
-                        '''
-                        sh '''
-                            docker push ${DOCKER_IMAGE}
-                        '''
+            stages {
+                stage('Build and Test') {
+                    steps {
+                        sh 'ls -ltr'
+                        sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'
                     }
                 }
-            }
-        }
-        stage('Update Deployment File') {
-            environment {
-                S3_BUCKET_NAME = "chaithu5307project"
-                DEPLOYMENT_FILE_PATH = "java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml"
-            }
-            steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-credentials-id',
-                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
-                ]]) {
-                    sh '''
-                        # Update the deployment file with the new image tag
-                        sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" ${DEPLOYMENT_FILE_PATH}
+                // Uncomment if Static Code Analysis stage is required
+                /*
+                stage('Static Code Analysis') {
+                    environment {
+                        SONAR_URL = "http://54.175.213.96:9000"
+                    }
+                    steps {
+                        withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
+                            sh '''
+                                cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
+                                mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}
+                            '''
+                        }
+                    }
+                }
+                */
+                stage('Build and Push Docker Image') {
+                    environment {
+                        DOCKER_IMAGE = "docker.io/995290/ultimate-cicd:${BUILD_NUMBER}"
+                    }
+                    steps {
+                        withCredentials([usernamePassword(credentialsId: 'docker-cred', usernameVariable: 'DOCKER_CREDENTIALS_USR', passwordVariable: 'DOCKER_CREDENTIALS_PSW')]) {
+                            script {
+                                sh '''
+                                    cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
+                                    docker build -t ${DOCKER_IMAGE} .
+                                '''
+                                sh '''
+                                    echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin
+                                '''
+                                sh '''
+                                    docker push ${DOCKER_IMAGE}
+                                '''
+                            }
+                        }
+                    }
+                }
+                stage('Update Deployment File') {
+                    environment {
+                        S3_BUCKET_NAME = "chaithu5307project"
+                        DEPLOYMENT_FILE_PATH = "java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml"
+                    }
+                    steps {
+                        withCredentials([[
+                            $class: 'AmazonWebServicesCredentialsBinding',
+                            credentialsId: 'aws-credentials-id',
+                            accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                            secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                        ]]) {
+                            sh '''
+                                # Update the deployment file with the new image tag
+                                sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" ${DEPLOYMENT_FILE_PATH}
 
-                        # Upload the deployment file to S3
-                        aws s3 cp ${DEPLOYMENT_FILE_PATH} s3://${S3_BUCKET_NAME}/deployment-files/deployment-${BUILD_NUMBER}.yml
-                    '''
+                                # Upload the deployment file to S3
+                                aws s3 cp ${DEPLOYMENT_FILE_PATH} s3://${S3_BUCKET_NAME}/deployment-files/deployment-${BUILD_NUMBER}.yml
+                            '''
+                        }
+                    }
                 }
             }
         }
