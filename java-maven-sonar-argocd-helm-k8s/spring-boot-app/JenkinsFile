@@ -9,13 +9,13 @@ pipeline {
         stage('Checkout') {
             steps {
                 sh 'echo passed'
+                // Uncomment this line if actual checkout is required
                 // git branch: 'main', url: 'https://github.com/iam-veeramalla/Jenkins-Zero-To-Hero.git'
             }
         }
         stage('Build and Test') {
             steps {
                 sh 'ls -ltr'
-                // Build the project and create a JAR file
                 sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'
             }
         }
@@ -39,16 +39,13 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-cred', usernameVariable: 'DOCKER_CREDENTIALS_USR', passwordVariable: 'DOCKER_CREDENTIALS_PSW')]) {
                     script {
-                        // Build the Docker image
                         sh '''
                             cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
                             docker build -t ${DOCKER_IMAGE} .
                         '''
-                        // Log in to Docker registry
                         sh '''
                             echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin
                         '''
-                        // Push the image to the registry
                         sh '''
                             docker push ${DOCKER_IMAGE}
                         '''
@@ -66,9 +63,10 @@ pipeline {
                     sh '''
                         git config user.email "chaitanyavarma142@gmail.com"
                         git config user.name "chaituvarma142"
+                        git checkout main || echo "Already on main branch"
                         sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                        git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                        git commit -m "Update deployment image to version ${BUILD_NUMBER}"
+                        git add -A
+                        git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit"
                         git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
                     '''
                 }
