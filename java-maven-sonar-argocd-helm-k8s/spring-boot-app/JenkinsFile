@@ -83,7 +83,7 @@ pipeline {
                             secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
                         ]]) {
                             sh '''
-                                cd /var/lib/jenkins/workspace/Continuous_Integration
+                                cd /var/lib/jenkins/workspace
                                 # Update the deployment file with the new image tag
                                 sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" ${DEPLOYMENT_FILE_PATH}
 
