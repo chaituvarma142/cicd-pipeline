@@ -51,32 +51,24 @@ pipeline {
                 }
 
                 // Update Deployment File
-                stage('Update Deployment File') {
-                    environment {
-                        S3_BUCKET_NAME = "chaithu5307project"
-                        //DEPLOYMENT_FILE_PATH = "/var/lib/jenkins/workspace/Continuous_Integration/java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml"
-                    }
-                    steps {
-                        withCredentials([[ 
-                            $class: 'AmazonWebServicesCredentialsBinding', 
-                            credentialsId: 'aws-credentials-id',
-                            accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                            secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
-                        ]]) {
-                            sh '''
-                                # Get the current working directory
-                                    WORKSPACE_DIR=$(pwd)
+            stage('Update Deployment File') {
+        environment {
+            GIT_REPO_NAME = "deployment_files_manifest"
+            GIT_USER_NAME = "chaituvarma142"
+        }
+        steps {
+            withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+                sh '''
+                    git config user.email "chaitanyavarma142@gmail.com"
+                    git config user.name "chaituvarma142"
+                    BUILD_NUMBER=${BUILD_NUMBER}
+                    sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                    git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                    git commit -m "Update deployment image to version ${BUILD_NUMBER}"
+                    git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                '''
+            }
 
-                                    # Update the deployment file with the new image tag
-                                    sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" $WORKSPACE_DIR/java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                                    aws sts get-caller-identity
-                                # Upload the deployment file to S3
-                                    aws s3 cp /var/lib/jenkins/workspace/Continuous_Integration/java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml s3://${S3_BUCKET_NAME}/deployment-files/deployment-${BUILD_NUMBER}.yml
-
-                            '''
-                        }
-                    }
-                }
             }
         }
     }
