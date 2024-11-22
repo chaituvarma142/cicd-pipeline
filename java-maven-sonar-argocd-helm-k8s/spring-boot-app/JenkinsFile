@@ -55,19 +55,21 @@ pipeline {
         }
         stage('Update Deployment File') {
             environment {
-                GIT_REPO_NAME = "cicd-pipeline"
-                GIT_USER_NAME = "chaituvarma142"
+                S3_BUCKET_NAME = "chaithu5307project"
+                DEPLOYMENT_FILE_PATH = "java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml"
             }
             steps {
-                withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                ]]) {
                     sh '''
-                        git config user.email "chaitanyavarma142@gmail.com"
-                        git config user.name "chaituvarma142"
-                        git checkout main || echo "Already on main branch"
-                        sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                        git add -A
-                        git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit"
-                        git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                        # Update the deployment file with the new image tag
+                        sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" ${DEPLOYMENT_FILE_PATH}
+
+                        # Upload the updated deployment file to the S3 bucket
+                        aws s3 cp ${DEPLOYMENT_FILE_PATH} s3://${S3_BUCKET_NAME}/deployment-files/deployment-${BUILD_NUMBER}.yml
                     '''
                 }
             }
