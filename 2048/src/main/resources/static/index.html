@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hey, Come and beat the game </title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #board {
+            display: grid;
+            grid-template-columns: repeat(4, 100px);
+            gap: 5px;
+            justify-content: center;
+        }
+        .cell {
+            width: 100px;
+            height: 100px;
+            line-height: 100px;
+            border: 1px solid #ccc;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+    <h1>2048 Game</h1>
+    <div id="board"></div>
+    <p>
+        Use arrow keys or buttons below to play!
+    </p>
+    <button onclick="makeMove('left')">Left</button>
+    <button onclick="makeMove('up')">Up</button>
+    <button onclick="makeMove('down')">Down</button>
+    <button onclick="makeMove('right')">Right</button>
+    <script>
+        const boardDiv = document.getElementById('board');
+
+        async function fetchBoard() {
+            const response = await fetch('/api/game/board');
+            const board = await response.json();
+            renderBoard(board);
+        }
+
+        async function makeMove(direction) {
+            const response = await fetch(`/api/game/move?direction=${direction}`, { method: 'POST' });
+            const board = await response.json();
+            renderBoard(board);
+            const gameOverResponse = await fetch('/api/game/gameover');
+            const isGameOver = await gameOverResponse.json();
+            if (isGameOver) {
+                alert('Game Over!');
+            }
+        }
+
+        function renderBoard(board) {
+            boardDiv.innerHTML = '';
+            board.forEach(row => {
+                row.forEach(cell => {
+                    const cellDiv = document.createElement('div');
+                    cellDiv.className = 'cell';
+                    cellDiv.textContent = cell === 0 ? '' : cell;
+                    boardDiv.appendChild(cellDiv);
+                });
+            });
+        }
+
+        document.addEventListener('keydown', (event) => {
+            const direction = {
+                ArrowUp: 'up',
+                ArrowDown: 'down',
+                ArrowLeft: 'left',
+                ArrowRight: 'right'
+            }[event.key];
+            if (direction) makeMove(direction);
+        });
+
+        fetchBoard();
+    </script>
+</body>
+</html>
