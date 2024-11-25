@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hey, Come and beat the game </title>
+    <title>2048 Game</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -25,10 +25,17 @@
             text-align: center;
             background-color: #f4f4f4;
         }
+        #game-over {
+            display: none;
+            color: red;
+            font-size: 24px;
+            margin: 20px;
+        }
     </style>
 </head>
 <body>
     <h1>2048 Game</h1>
+    <div id="game-over">Game Over! Start a new game.</div>
     <div id="board"></div>
     <p>
         Use arrow keys or buttons below to play!
@@ -37,8 +44,10 @@
     <button onclick="makeMove('up')">Up</button>
     <button onclick="makeMove('down')">Down</button>
     <button onclick="makeMove('right')">Right</button>
+    <button onclick="startNewGame()">New Game</button>
     <script>
         const boardDiv = document.getElementById('board');
+        const gameOverDiv = document.getElementById('game-over');
 
         async function fetchBoard() {
             const response = await fetch('/api/game/board');
@@ -50,11 +59,24 @@
             const response = await fetch(`/api/game/move?direction=${direction}`, { method: 'POST' });
             const board = await response.json();
             renderBoard(board);
-            const gameOverResponse = await fetch('/api/game/gameover');
-            const isGameOver = await gameOverResponse.json();
+            checkGameOver();
+        }
+
+        async function checkGameOver() {
+            const response = await fetch('/api/game/gameover');
+            const isGameOver = await response.json();
             if (isGameOver) {
-                alert('Game Over!');
+                gameOverDiv.style.display = 'block';
+            } else {
+                gameOverDiv.style.display = 'none';
             }
+        }
+
+        async function startNewGame() {
+            const response = await fetch('/api/game/newgame', { method: 'POST' });
+            const board = await response.json();
+            renderBoard(board);
+            gameOverDiv.style.display = 'none';
         }
 
         function renderBoard(board) {

@@ -27,4 +27,10 @@ public class Game2048Controller {
     public boolean isGameOver() {
         return game.isGameOver();
     }
+
+    @PostMapping("/newgame")
+    public int[][] newGame() {
+        game.resetGame();
+        return game.getBoard();
+    }
 }
