@@ -49,7 +49,7 @@ pipeline {
                         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
                                  sh '''   
                                            # fix for error
-                                            git pull origin/main
+                                            git pull origin main
                                          # Ensure we are on the main branch
                                          git checkout main
                                         
