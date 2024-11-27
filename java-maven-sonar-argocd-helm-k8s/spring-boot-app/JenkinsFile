@@ -50,6 +50,8 @@ pipeline {
                                  sh '''
                                          # Ensure we are on the main branch
                                          git checkout main
+                                        # fix for error
+                                            git pull
                 
                                          # Reset and clean the workspace
                                          git reset --hard
