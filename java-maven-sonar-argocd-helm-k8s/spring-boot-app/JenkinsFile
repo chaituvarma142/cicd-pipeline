@@ -47,11 +47,12 @@ pipeline {
                     }
                     steps {
                         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-                                 sh '''
+                                 sh '''   
+                                           # fix for error
+                                            git pull
                                          # Ensure we are on the main branch
                                          git checkout main
-                                        # fix for error
-                                            git pull
+                                        
                 
                                          # Reset and clean the workspace
                                          git reset --hard
