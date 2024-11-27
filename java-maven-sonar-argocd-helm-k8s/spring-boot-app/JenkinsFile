@@ -38,6 +38,7 @@ stage('Update Deployment File') {
                 git fetch origin main
                 git checkout main
                 git reset --hard origin/main
+                git clean -fd
                 
                 BUILD_NUMBER=${BUILD_NUMBER}
                 sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
