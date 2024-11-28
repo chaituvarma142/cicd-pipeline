@@ -55,7 +55,7 @@ pipeline {
                                             git pull origin main
                                          # Ensure we are on the main branch
                                             git checkout main
-                                        
+                                        	git pull origin main --rebase
                 
                                          # Reset and clean the workspace
                                          git reset --hard
