@@ -50,12 +50,17 @@ pipeline {
                                  sh '''   
 				git config user.email "chaitanyavarma142@gmail.com"
                                 git config user.name "chaituvarma142"
-                                
-                                           # fix for error
-                                            git pull origin main
-                                         # Ensure we are on the main branch
-                                            git checkout main
-                                            git pull origin main --rebase
+
+                                 # Ensure we are on the main branch
+                                   git checkout main
+                                 # fix for error
+                                 echo "Stashing any local changes..."
+                		   git stash || echo "No changes to stash."
+		                 echo "Pulling latest changes from remote..."
+                		   git pull origin main --rebase
+		                 echo "Applying stashed changes (if any)..."
+               			   git stash pop || echo "No stashed changes to apply."
+	                           git pull origin main --rebase
                 
                                          # Reset and clean the workspace
                                          git reset --hard
@@ -65,12 +70,11 @@ pipeline {
                                           BUILD_NUMBER=${BUILD_NUMBER}
                                           sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                 
-                                       # Stage and commit the changes
-										git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                                    	  # Stage and commit the changes
+					git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                                          git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit."
-                
-                # Push changes to the main branch
-                git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:refs/heads/main
+                               		 # Push changes to the main branch
+                			git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:refs/heads/main
             
                     '''
                         }
