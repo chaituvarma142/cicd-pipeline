@@ -1,14 +1,11 @@
 pipeline {
     agent any
     stages {
-        stage('Clean Clone') {
+        stage('Checkout') {
             steps {
-                dir('workspace-clean') {
-                    deleteDir() // Ensure a clean directory
-                    checkout([$class: 'GitSCM',
-                    branches: [[name: '*/main']],
-                    userRemoteConfigs: [[url: 'https://github.com/chaituvarma142/cicd-pipeline.git']]])
-                }
+                checkout([$class: 'GitSCM',
+                branches: [[name: '*/main']],
+                userRemoteConfigs: [[url: 'https://github.com/chaituvarma142/cicd-pipeline.git']]])
             }
         }
 
@@ -16,18 +13,14 @@ pipeline {
             agent {
                 docker {
                     image 'abhishekf5/maven-abhishek-docker-agent:v1'
-                    args '--entrypoint "" --user root -v /var/run/docker.sock:/var/run/docker.sock'
+                    args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
                 }
             }
             stages {
-                stage('Validate Directory') {
+                stage('Build and Test') {
                     steps {
-                        dir('workspace-clean') {
-                            sh '''
-                                echo "Listing workspace-clean contents:"
-                                ls -la
-                            '''
-                        }
+                        sh 'ls -ltr'
+                        sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'
                     }
                 }
 
@@ -36,12 +29,8 @@ pipeline {
                         DOCKER_IMAGE = "docker.io/995290/ultimate-cicd:${BUILD_NUMBER}"
                     }
                     steps {
-                        dir('workspace-clean') {
+                        withCredentials([usernamePassword(credentialsId: 'docker-cred', usernameVariable: 'DOCKER_CREDENTIALS_USR', passwordVariable: 'DOCKER_CREDENTIALS_PSW')]) {
                             sh '''
-                                if [ ! -d "java-maven-sonar-argocd-helm-k8s/spring-boot-app" ]; then
-                                    echo "ERROR: Directory java-maven-sonar-argocd-helm-k8s/spring-boot-app does not exist"
-                                    exit 1
-                                fi
                                 cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
                                 docker build -t ${DOCKER_IMAGE} .
                                 echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin
@@ -57,22 +46,30 @@ pipeline {
                         GIT_USER_NAME = "chaituvarma142"
                     }
                     steps {
-                        dir('workspace-clean') {
-                            withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-                                sh '''
-                                    git config user.email "chaitanyavarma142@gmail.com"
-                                    git config user.name "chaituvarma142"
-
-                                    git reset --hard
-                                    git clean -fd
-                                    git pull origin main --rebase
-
-                                    sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                                    git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                                    git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit."
-                                    git push --force-with-lease https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:refs/heads/main
-                                '''
-                            }
+                        withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+                                 sh '''   
+                                           # fix for error
+                                            git pull origin main
+                                         # Ensure we are on the main branch
+                                         git checkout main
+                                        
+                
+                                         # Reset and clean the workspace
+                                         git reset --hard
+                                         git clean -fd
+                
+                                          # Update the deployment file with the new image tag
+                                          BUILD_NUMBER=${BUILD_NUMBER}
+                                          sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                
+                                       # Stage and commit the changes
+										git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                                         git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit."
+                
+                # Push changes to the main branch
+                git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:refs/heads/main
+            
+                    '''
                         }
                     }
                 }
