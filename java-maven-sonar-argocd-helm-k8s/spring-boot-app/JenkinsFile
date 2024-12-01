@@ -51,18 +51,18 @@ pipeline {
                                 git config user.email "chaitanyavarma142@gmail.com"
                                 git config user.name "chaituvarma142"
 
-                                # Ensure the latest changes are pulled
+                                # Ensure the branch is properly checked out
                                 git reset --hard
                                 git clean -fd
                                 git fetch origin main
-                                git reset --hard origin/main
+                                git checkout -B main origin/main
 
                                 # Update deployment file
                                 sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                                 git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                                 git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit."
                                 
-                                # Force push changes to avoid rejection
+                                # Push changes to remote
                                 git push --force-with-lease https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:refs/heads/main
                             '''
                         }
