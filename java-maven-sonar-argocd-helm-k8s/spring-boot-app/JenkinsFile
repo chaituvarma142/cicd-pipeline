@@ -7,7 +7,7 @@ pipeline {
                     deleteDir() // Ensure a clean directory
                     checkout([$class: 'GitSCM',
                     branches: [[name: '*/main']],
-                    userRemoteConfigs: [[url: 'https://github.com/chaituvarma142/deployment_files_manifest.git']]])
+                    userRemoteConfigs: [[url: 'https://github.com/chaituvarma142/cicd-pipeline.git']]])
                 }
             }
         }
@@ -20,6 +20,17 @@ pipeline {
                 }
             }
             stages {
+                stage('Validate Directory') {
+                    steps {
+                        dir('workspace-clean') {
+                            sh '''
+                                echo "Listing workspace-clean contents:"
+                                ls -la
+                            '''
+                        }
+                    }
+                }
+
                 stage('Build and Push Docker Image') {
                     environment {
                         DOCKER_IMAGE = "docker.io/995290/ultimate-cicd:${BUILD_NUMBER}"
@@ -27,6 +38,10 @@ pipeline {
                     steps {
                         dir('workspace-clean') {
                             sh '''
+                                if [ ! -d "java-maven-sonar-argocd-helm-k8s/spring-boot-app" ]; then
+                                    echo "ERROR: Directory java-maven-sonar-argocd-helm-k8s/spring-boot-app does not exist"
+                                    exit 1
+                                fi
                                 cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
                                 docker build -t ${DOCKER_IMAGE} .
                                 echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin
@@ -48,17 +63,13 @@ pipeline {
                                     git config user.email "chaitanyavarma142@gmail.com"
                                     git config user.name "chaituvarma142"
 
-                                    # Ensure we're on the latest remote main branch
                                     git reset --hard
                                     git clean -fd
                                     git pull origin main --rebase
 
-                                    # Update deployment file
                                     sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                                     git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                                     git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit."
-                                    
-                                    # Force push updates to the remote repository
                                     git push --force-with-lease https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:refs/heads/main
                                 '''
                             }
