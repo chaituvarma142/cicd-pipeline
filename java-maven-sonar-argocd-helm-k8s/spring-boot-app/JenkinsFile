@@ -20,8 +20,10 @@ pipeline {
             stages {
                 stage('Build and Test') {
                     steps {
-                        sh 'ls -ltr'
-                        sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'
+                        sh '''
+                            ls -ltr
+                            cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package
+                        '''
                     }
                 }
 
@@ -48,36 +50,35 @@ pipeline {
                     }
                     steps {
                         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-                                 sh '''   
-								 
-						git config user.email "chaitanyavarma142@gmail.com"
-                       git config user.name "chaituvarma142"
+                            sh '''
+                                git config user.email "chaitanyavarma142@gmail.com"
+                                git config user.name "chaituvarma142"
 
-                        # Pull the latest changes from the remote repository
-                        git fetch origin main
-                        git reset --hard origin/main
+                                # Pull the latest changes from the remote repository
+                                git fetch origin main
+                                git reset --hard origin/main
 
-                        # Verify content of the deployment file before modification
-                        echo "Before modification:"
-                        cat java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                                # Verify content of the deployment file before modification
+                                echo "Before modification:"
+                                cat java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
-                        # Update the deployment file with the new image tag
-                        BUILD_NUMBER=${BUILD_NUMBER}
-#sed -i "s/image: abhishekf5\\/ultimate-cicd:[0-9]*/image: abhishekf5\\/ultimate-cicd:${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                                # Update the deployment file with the new image tag
+                                BUILD_NUMBER=${BUILD_NUMBER}
+                                sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
-                        sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                                # Verify content of the deployment file after modification
+                                echo "After modification:"
+                                cat java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
-                        # Verify content of the deployment file after modification
-                        echo "After modification:"
-                        cat java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                                # Add and commit changes
+                                git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                                git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit."
 
-                        # Add and commit changes
-                        git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                        git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit."
-
-                        # Push changes to the remote repository
-                        git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
-                    '''
+                                # Push changes to the remote repository
+                                git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                            '''
+                        }
+                    }
                 }
             }
         }
