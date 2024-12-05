@@ -75,7 +75,7 @@ pipeline {
                                 # Update the deployment file with the new image tag
                                 BUILD_NUMBER=${BUILD_NUMBER}
                                 #sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                                sed -i "s/image: abhishekf5\\/ultimate-cicd:[0-9]*/image: abhishekf5\\/ultimate-cicd:${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                                sed -i "s/image: 995290/\\/ultimate-cicd:[0-9]*/image: 995290/\\/ultimate-cicd:${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                                 # Verify content of the deployment file after modification
                                 echo "After modification:"
                                 cat java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
